@@ -201,7 +201,7 @@ export default function CustomerCampaignsPage() {
             <section className="rounded-2xl border border-white/10 bg-slate-900/80 p-6 shadow-lg">
               <h2 className="text-xl font-semibold text-white">Broadcast message</h2>
               <p className="mt-2 text-sm text-slate-400">
-                Send a message to selected customers, or filter by status and tags. Use <span className="font-semibold">{{'{name}'}}</span> and <span className="font-semibold">{{'{company}'}}</span> for personalization.
+                  Send a message to selected customers, or filter by status and tags. Use <span className="font-semibold">{'{name}'}</span> and <span className="font-semibold">{'{company}'}</span> for personalization.
               </p>
 
               <div className="mt-6 grid gap-4 sm:grid-cols-2">
