@@ -329,7 +329,7 @@ export default function CustomerCampaignsPage() {
                   <p>No scheduled campaign events yet.</p>
                 ) : (
                   events.map((event) => (
-                    <div key={event._id || event.id} className="rounded-2xl border border-white/10 bg-slate-950 p-3">
+                    <div key={event.id} className="rounded-2xl border border-white/10 bg-slate-950 p-3">
                       <div className="flex items-center justify-between gap-3">
                         <span className="font-semibold text-white">{event.name}</span>
                         <span className="text-slate-500">{event.active ? 'Active' : 'Closed'}</span>
