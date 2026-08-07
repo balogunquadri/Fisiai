@@ -1,5 +1,10 @@
 (async () => {
-  process.env.TELEGRAM_BOT_TOKEN = '8834229152:AAHDZ2yzF00-CkkQ7wjVIfwP4x8MRLXNhhI';
+  // Do NOT hard-code secrets. Read token from environment.
+  // If you need to run this locally, set TELEGRAM_BOT_TOKEN in your shell or .env file.
+  if (!process.env.TELEGRAM_BOT_TOKEN) {
+    console.error('❌ TELEGRAM_BOT_TOKEN is not set. Aborting end-to-end test to avoid exposing secrets.');
+    process.exit(1);
+  }
   const TelegramService = require('./src/services/TelegramService');
   const aiAgentService = require('./src/services/aiAgentService');
   const receiptGenerator = require('./src/services/receiptGenerator');
