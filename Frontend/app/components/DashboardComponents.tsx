@@ -25,7 +25,7 @@ interface ChartDataPoint {
   value: number;
 }
 
-export function DashboardStats({ totalStock, harvestedContacts, webhookStatus }: DashboardStatsProps) {
+export function DashboardStats({ totalStock, harvestedContacts, customerRecords, webhookStatus }: DashboardStatsProps) {
   const statusConfig = {
     operational: { text: 'Operational', color: 'text-emerald-400', bgColor: 'bg-emerald-400/10' },
     warning: { text: 'Warning', color: 'text-yellow-400', bgColor: 'bg-yellow-400/10' },
