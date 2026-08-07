@@ -1,0 +1,25 @@
+{
+  "name": "Fisiai",
+  "version": "1.0.0",
+  "description": "FisiAI - AI-powered inventory & sales assistant for WhatsApp",
+  "private": true,
+  "scripts": {
+    "dev": "concurrently \"npm run dev:frontend\" \"npm run dev:backend\" \"npm run dev:webhook-worker\" --names \"FRONTEND,BACKEND,WORKER\"",
+    "dev:frontend": "cd Frontend && npm run dev",
+    "dev:backend": "cd backend && npm run dev",
+    "dev:webhook-worker": "cd backend && npm run worker:webhook",
+    "build:frontend": "cd Frontend && npm run build",
+    "build:backend": "echo 'Backend does not require build'",
+    "start:frontend": "cd Frontend && npm start",
+    "start:backend": "cd backend && npm start",
+    "start:webhook-worker": "cd backend && npm run worker:webhook",
+    "install:all": "npm install && cd backend && npm install && cd ../Frontend && npm install"
+  },
+  "devDependencies": {
+    "concurrently": "^8.2.2"
+  },
+  "dependencies": {
+    "nodemon": "^3.1.14",
+    "uuid": "^14.0.1"
+  }
+}
