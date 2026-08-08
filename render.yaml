@@ -1,0 +1,23 @@
+services:
+  - type: web_service
+    name: stackai-backend-web
+    env: node
+    root: backend
+    buildCommand: npm install
+    startCommand: npm start
+    autoDeploy: true
+    healthCheckPath: /health
+    envVars:
+      - key: NODE_ENV
+        value: production
+
+  - type: worker
+    name: stackai-backend-worker
+    env: node
+    root: backend
+    buildCommand: npm install
+    startCommand: npm run worker:webhook
+    autoDeploy: true
+    envVars:
+      - key: NODE_ENV
+        value: production
