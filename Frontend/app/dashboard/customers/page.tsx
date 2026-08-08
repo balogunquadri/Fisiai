@@ -51,7 +51,14 @@ export default function CustomersPage() {
   const [saving, setSaving] = useState(false);
   const [actionMessage, setActionMessage] = useState<string | null>(null);
   const [birthdayMessage, setBirthdayMessage] = useState<string | null>(null);
-  const hasMerchant = Boolean(process.env.NEXT_PUBLIC_MERCHANT_ID && process.env.NEXT_PUBLIC_MERCHANT_ID !== 'YOUR_MERCHANT_ID_HERE');
+  const [merchantId, setMerchantId] = useState<string | null>(null);
+  const hasMerchant = Boolean(merchantId);
+
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    const storedId = window.localStorage.getItem('merchantId');
+    setMerchantId(storedId && storedId !== 'YOUR_MERCHANT_ID_HERE' ? storedId : null);
+  }, []);
 
   const loadCustomers = async () => {
     setLoading(true);

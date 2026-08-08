@@ -12,7 +12,6 @@ export default function SigninPage() {
   });
   const [toastMessage, setToastMessage] = useState<string | null>(null);
   const [toastType, setToastType] = useState<'success' | 'error' | 'info'>('info');
-  const [merchantId, setMerchantId] = useState<string | null>(process.env.NEXT_PUBLIC_MERCHANT_ID || null);
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const value = e.target.type === 'checkbox' ? e.target.checked : e.target.value;
@@ -48,7 +47,6 @@ export default function SigninPage() {
       }
 
       const id = data.merchantId || null;
-      setMerchantId(id);
       if (id) window.localStorage.setItem('merchantId', id);
       showToast('Signed in successfully', 'success');
       setTimeout(() => {
@@ -161,15 +159,6 @@ export default function SigninPage() {
             Sign in with WhatsApp
           </a>
 
-          {merchantId ? (
-            <div className="rounded-2xl border border-emerald-400/20 bg-emerald-400/5 p-4 mt-4 text-sm text-emerald-100">
-              <p className="font-semibold text-emerald-200">Merchant ID</p>
-              <p className="break-all text-slate-200">{merchantId}</p>
-              <p className="mt-2 text-xs text-slate-400">
-                Use this merchant ID in <code className="rounded bg-slate-900 px-1 py-0.5">NEXT_PUBLIC_MERCHANT_ID</code> if needed.
-              </p>
-            </div>
-          ) : null}
 
           {/* Sign Up Link */}
           <p className="text-center text-sm text-slate-400 mt-6">

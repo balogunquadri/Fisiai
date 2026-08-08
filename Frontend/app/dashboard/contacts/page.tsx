@@ -81,7 +81,14 @@ export default function ContactsPage() {
   const [formError, setFormError] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
-  const hasMerchant = Boolean(process.env.NEXT_PUBLIC_MERCHANT_ID && process.env.NEXT_PUBLIC_MERCHANT_ID !== 'YOUR_MERCHANT_ID_HERE');
+  const [merchantId, setMerchantId] = useState<string | null>(null);
+  const hasMerchant = Boolean(merchantId);
+
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    const storedId = window.localStorage.getItem('merchantId');
+    setMerchantId(storedId && storedId !== 'YOUR_MERCHANT_ID_HERE' ? storedId : null);
+  }, []);
 
   useEffect(() => {
     let isMounted = true;

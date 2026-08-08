@@ -34,7 +34,15 @@ export default function InventoryPage() {
   const [formError, setFormError] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
-  const hasMerchant = Boolean(process.env.NEXT_PUBLIC_MERCHANT_ID && process.env.NEXT_PUBLIC_MERCHANT_ID !== 'YOUR_MERCHANT_ID_HERE');
+  const [merchantId, setMerchantId] = useState<string | null>(null);
+  const hasMerchant = Boolean(merchantId);
+
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      const storedId = window.localStorage.getItem('merchantId');
+      setMerchantId(storedId && storedId !== 'YOUR_MERCHANT_ID_HERE' ? storedId : null);
+    }
+  }, []);
 
   useEffect(() => {
     let isMounted = true;
@@ -340,7 +348,7 @@ export default function InventoryPage() {
             <div className="space-y-6">
               {!hasMerchant && (
                 <div className="rounded-2xl border border-yellow-400/20 bg-yellow-900/5 p-4 text-yellow-100">
-                  No merchant configured. Set NEXT_PUBLIC_MERCHANT_ID or connect your messaging channel to load live inventory.
+                  No merchant configured. Sign in to your account to load real inventory data.
                 </div>
               )}
               <div className="overflow-hidden rounded-2xl border border-white/10 bg-slate-950/50 shadow-sm">

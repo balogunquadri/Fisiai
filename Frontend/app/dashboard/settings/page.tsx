@@ -7,11 +7,7 @@ import { fetchMerchantOverview, type MerchantOverviewResponse } from '../../../l
 
 export default function SettingsPage() {
   const [merchant, setMerchant] = useState<MerchantOverviewResponse['merchant'] | null>(null);
-  const [merchantId, setMerchantId] = useState<string | null>(
-    process.env.NEXT_PUBLIC_MERCHANT_ID && process.env.NEXT_PUBLIC_MERCHANT_ID !== 'YOUR_MERCHANT_ID_HERE'
-      ? process.env.NEXT_PUBLIC_MERCHANT_ID
-      : null,
-  );
+  const [merchantId, setMerchantId] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -109,7 +105,7 @@ export default function SettingsPage() {
               <p className="text-slate-400">Loading merchant settings...</p>
             ) : !hasMerchant ? (
               <div className="rounded-2xl border border-yellow-400/20 bg-yellow-900/5 p-4 text-yellow-100">
-                No merchant configured. Set <code>NEXT_PUBLIC_MERCHANT_ID</code> in your frontend env or complete signup to load real settings.
+                No merchant configured. Sign in or complete signup to load your real merchant settings.
               </div>
             ) : error ? (
               <div className="rounded-2xl border border-rose-500/30 bg-rose-500/10 p-4 text-rose-200">{error}</div>

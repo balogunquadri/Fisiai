@@ -55,6 +55,8 @@ export default function DashboardPage() {
   const [financialSource, setFinancialSource] = useState<'all' | 'whatsapp' | 'telegram'>('all');
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [merchantId, setMerchantId] = useState<string | null>(null);
+  const hasMerchant = Boolean(merchantId);
 
   const [inventoryItems, setInventoryItems] = useState<InventoryItem[]>([]);
   const [leadItems, setLeadItems] = useState<LeadItem[]>([]);
@@ -91,7 +93,11 @@ export default function DashboardPage() {
   });
   const [savingManage, setSavingManage] = useState(false);
 
-  const hasMerchant = Boolean(process.env.NEXT_PUBLIC_MERCHANT_ID && process.env.NEXT_PUBLIC_MERCHANT_ID !== 'YOUR_MERCHANT_ID_HERE');
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    const storedId = window.localStorage.getItem('merchantId');
+    setMerchantId(storedId && storedId !== 'YOUR_MERCHANT_ID_HERE' ? storedId : null);
+  }, []);
 
   useEffect(() => {
     let isMounted = true;

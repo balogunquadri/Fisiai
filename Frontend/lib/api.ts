@@ -1,5 +1,13 @@
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000';
-const DEFAULT_MERCHANT_ID = process.env.NEXT_PUBLIC_MERCHANT_ID || '';
+const DEFAULT_MERCHANT_ID = process.env.NEXT_PUBLIC_MERCHANT_ID && process.env.NEXT_PUBLIC_MERCHANT_ID !== 'YOUR_MERCHANT_ID_HERE'
+  ? process.env.NEXT_PUBLIC_MERCHANT_ID
+  : '';
+
+const getStoredMerchantId = () => {
+  if (typeof window === 'undefined') return '';
+  const storedId = window.localStorage.getItem('merchantId');
+  return storedId && storedId !== 'YOUR_MERCHANT_ID_HERE' ? storedId : '';
+};
 
 export type DashboardSummary = {
   merchantCount: number;
@@ -552,7 +560,7 @@ export type AdminSummaryResponse = {
   }>;
 };
 
-const resolveMerchantId = (merchantId?: string) => merchantId || DEFAULT_MERCHANT_ID;
+const resolveMerchantId = (merchantId?: string) => merchantId || getStoredMerchantId() || DEFAULT_MERCHANT_ID;
 
 export async function fetchDashboardSummary(): Promise<DashboardSummary> {
   const response = await fetch(`${API_BASE_URL}/api/dashboard/summary`, {

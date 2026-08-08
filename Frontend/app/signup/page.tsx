@@ -16,7 +16,6 @@ export default function SignupPage() {
   const [agreed, setAgreed] = useState(false);
   const [toastMessage, setToastMessage] = useState<string | null>(null);
   const [toastType, setToastType] = useState<'success' | 'error' | 'info'>('info');
-  const [merchantId, setMerchantId] = useState<string | null>(process.env.NEXT_PUBLIC_MERCHANT_ID || null);
   const [verificationLink, setVerificationLink] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [formErrors, setFormErrors] = useState<Record<string, string>>({});
@@ -139,7 +138,6 @@ export default function SignupPage() {
       }
 
       const id = data.merchantId || null;
-      setMerchantId(id);
       setVerificationLink(data.verificationLink || null);
       if (id) window.localStorage.setItem('merchantId', id);
       showToast('Account created successfully. Check your email to verify your address.', 'success');
@@ -309,20 +307,11 @@ export default function SignupPage() {
               {isSubmitting ? 'Creating account...' : 'Create Account'}
             </button>
           </form>
-          {merchantId ? (
-            <div className="rounded-2xl border border-emerald-400/20 bg-emerald-400/5 p-4 mt-4 text-sm text-emerald-100">
-              <p className="font-semibold text-emerald-200">Merchant ID</p>
-              <p className="break-all text-slate-200">{merchantId}</p>
-              <p className="mt-2 text-xs text-slate-400">
-                Save this merchant ID in <code className="rounded bg-slate-900 px-1 py-0.5">NEXT_PUBLIC_MERCHANT_ID</code> for dashboard and lead requests.
-              </p>
-              {verificationLink ? (
-                <div className="mt-3 rounded-2xl border border-slate-700 bg-slate-900/80 p-3 text-xs text-slate-300">
-                  <p className="font-semibold text-slate-200">Verification link</p>
-                  <p className="break-all">{verificationLink}</p>
-                  <p className="mt-2 text-slate-500">Use this link to verify your email if the email service is not configured.</p>
-                </div>
-              ) : null}
+          {verificationLink ? (
+            <div className="mt-3 rounded-2xl border border-slate-700 bg-slate-900/80 p-3 text-xs text-slate-300">
+              <p className="font-semibold text-slate-200">Verification link</p>
+              <p className="break-all">{verificationLink}</p>
+              <p className="mt-2 text-slate-500">Use this link to verify your email if the email service is not configured.</p>
             </div>
           ) : null}
           {/* Sign In Link */}
