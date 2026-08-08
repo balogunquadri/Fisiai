@@ -1,10 +1,14 @@
+
 const express = require('express');
 const path = require('path');
 const cors = require('cors');
+
 const helmet = require('helmet');
 const mongoose = require('mongoose');
 const session = require('express-session');
 const MongoStore = require('connect-mongo');
+
+
 require('dotenv').config();
 
 const cacheService = require('./services/cacheService');
@@ -14,17 +18,17 @@ const { apiLimiter, webhookLimiter } = require('./middleware/rateLimiter');
 const healthMonitor = require('./services/healthMonitor');
 const fs = require('fs');
 
-let heapdump = null;
-if (process.env.ENABLE_HEAPDUMP === 'true') {
-  try {
-    heapdump = require('heapdump');
-    console.log('✓ heapdump module loaded');
-  } catch (err) {
-    console.warn('⚠ heapdump module not available:', err.message);
-  }
-}
 
 const app = express();
+
+
+if (process.env.EMBEDDED_WORKERS === 'true') {
+  require('./workers/webhookWorker');
+  require('./workers/mediaWorker');
+}
+// // Start queue processors in the same web process
+// require('./workers/webhookWorker');
+// require('./workers/mediaWorker');
 
 // ============================================
 // SECURITY MIDDLEWARE
