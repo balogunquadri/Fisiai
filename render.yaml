@@ -10,6 +10,8 @@ services:
     envVars:
       - key: NODE_ENV
         value: production
+      - key: EMBEDDED_WORKERS
+        value: "true"
 
   - type: worker
     name: stackai-backend-worker

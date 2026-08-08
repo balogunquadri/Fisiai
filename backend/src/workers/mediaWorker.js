@@ -202,55 +202,6 @@ mediaQueue.process('process-message', async (job) => {
     await ActivityLog.create({ merchantId, action: 'PROCESS', entityType: 'MediaWorker', details: { from, messageType: messageData.type, attachmentSummary: summary, resultSummary: { inventory: (combinedResult.inventory_updates || []).length, contacts: (combinedResult.extracted_contacts || []).length, errors: errors.length } }, status: 'Success' });
 
     return { success: true, errors };
-
-    // Apply updates conservatively
-    const errors = modelResult.errors || [];
-
-    // Inventory updates: only update existing inventory products (avoid creating invalid docs)
-    for (const inv of modelResult.inventory_updates || []) {
-      if (!inv.name) {
-        errors.push({ code: 'invalid_inventory', message: 'Empty inventory name' });
-        continue;
-      }
-      const item = await Inventory.findOne({ productName: new RegExp(`^${escapeRegExp(inv.name)}$`, 'i'), merchantId });
-      if (item) {
-        item.quantity = (item.quantity || 0) + Number(inv.quantity_change || 0);
-        await item.save();
-      } else {
-        errors.push({ code: 'missing_inventory', message: `No matching product for '${inv.name}'` });
-      }
-    }
-
-    // Contacts: upsert if phone provided
-    for (const c of modelResult.extracted_contacts || []) {
-      if (!c.phone) {
-        errors.push({ code: 'missing_contact_phone', message: `Contact missing phone for ${c.name || 'unknown'}` });
-        continue;
-      }
-      // split name
-      const names = (c.name || '').split(' ').filter(Boolean);
-      const firstName = names[0] || 'Unknown';
-      const lastName = names.slice(1).join(' ') || ' '; 
-      await Contact.findOneAndUpdate(
-        { merchantId, phone: c.phone },
-        { merchantId, firstName, lastName, email: c.email || undefined, source: 'whatsapp_chat', notes: c.role || '' },
-        { upsert: true, new: true }
-      );
-    }
-
-    // Send reply back
-    const reply = modelResult.reply_text || 'Thanks — I processed your message.';
-    try {
-      await WhatsAppService.sendTextMessage(from, reply, merchantId);
-    } catch (e) {
-      console.error('Failed to send WhatsApp reply', e.message || e);
-      errors.push({ code: 'send_failed', message: String(e) });
-    }
-
-    // Log activity
-    await ActivityLog.create({ merchantId, action: 'PROCESS', entityType: 'MediaWorker', details: { from, messageType: messageData.type, resultSummary: { inventory: (modelResult.inventory_updates || []).length, contacts: (modelResult.extracted_contacts || []).length } }, status: 'Success' });
-
-    return { success: true, errors };
   } catch (err) {
     console.error('mediaWorker job error', err);
     await ActivityLog.create({ merchantId: merchantId || null, action: 'PROCESS', entityType: 'MediaWorker', details: { from, messageData, error: String(err) }, status: 'Failure' });
