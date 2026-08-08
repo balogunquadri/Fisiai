@@ -130,6 +130,8 @@ export default function TasksPage() {
         assignedName: '',
         assignedRole: '',
         dueDate: '',
+        deliveryPartner: '',
+        pickupLocation: '',
         deliveryAddress: '',
         sendInvite: true,
       });
