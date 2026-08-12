@@ -1,4 +1,6 @@
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000';
+// Normalize base URL: remove trailing slashes to avoid double-slash requests
+const rawApiBase = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000';
+const API_BASE_URL = rawApiBase.replace(/\/+$/, '');
 const DEFAULT_MERCHANT_ID = process.env.NEXT_PUBLIC_MERCHANT_ID && process.env.NEXT_PUBLIC_MERCHANT_ID !== 'YOUR_MERCHANT_ID_HERE'
   ? process.env.NEXT_PUBLIC_MERCHANT_ID
   : '';
