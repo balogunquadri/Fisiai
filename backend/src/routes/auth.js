@@ -23,8 +23,35 @@ router.post('/signup', authLimiter, validateSignup, async (req, res) => {
     const { businessName, email, phone, password } = req.body;
 
     // Prevent duplicate accounts by email
-    const existing = await Merchant.findOne({ email: email.toLowerCase().trim() });
+    const existing = await Merchant.findOne({ email: email.toLowerCase().trim() }).select('+emailVerified');
     if (existing) {
+      // If the account exists but email is not verified, resend verification instead of a plain 409
+      if (!existing.emailVerified) {
+        try {
+          const emailVerificationToken = crypto.randomBytes(24).toString('hex');
+          const verificationUrl = `${process.env.FRONTEND_URL || 'http://localhost:3000'}/verify-email?token=${emailVerificationToken}`;
+
+          existing.emailVerificationToken = emailVerificationToken;
+          existing.emailVerificationTokenExpires = new Date(Date.now() + 1000 * 60 * 60 * 24);
+          await existing.save();
+
+          const emailSent = await sendVerificationEmail(existing.email, verificationUrl);
+
+          return res.status(200).json({
+            success: false,
+            error: 'An account with this email already exists but is not verified. A verification email has been resent.',
+            emailVerificationSent: emailSent,
+            verificationLink: !emailSent ? verificationUrl : undefined,
+          });
+        } catch (err) {
+          console.warn('[RESEND_VERIFICATION_ERROR]', err && err.message ? err.message : err);
+          return res.status(200).json({
+            success: false,
+            error: 'An account with this email already exists but is not verified. We could not resend the verification email at this time. Please try again later.',
+          });
+        }
+      }
+
       return res.status(409).json({ success: false, error: 'An account with this email already exists' });
     }
 

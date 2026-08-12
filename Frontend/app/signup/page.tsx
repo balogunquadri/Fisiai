@@ -17,6 +17,8 @@ export default function SignupPage() {
   const [toastMessage, setToastMessage] = useState<string | null>(null);
   const [toastType, setToastType] = useState<'success' | 'error' | 'info'>('info');
   const [verificationLink, setVerificationLink] = useState<string | null>(null);
+  const [existingUnverified, setExistingUnverified] = useState(false);
+  const [resendInProgress, setResendInProgress] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [formErrors, setFormErrors] = useState<Record<string, string>>({});
 
@@ -108,7 +110,8 @@ export default function SignupPage() {
       });
 
       const data = await resp.json();
-      if (!resp.ok) {
+      // Handle HTTP errors or soft-fail responses where backend returns success:false
+      if (!resp.ok || (data && data.success === false)) {
         const errors: Record<string, string> = {};
         if (data.details && Array.isArray(data.details)) {
           data.details.forEach((detail: any) => {
@@ -134,11 +137,17 @@ export default function SignupPage() {
         }
         setFormErrors(errors);
         showToast(errors.general || Object.values(errors)[0], 'error');
+        // If backend indicated existing-but-unverified account, surface resend UI
+        if (data && data.error && String(data.error).toLowerCase().includes('not verified')) {
+          setExistingUnverified(true);
+          if (data.verificationLink) setVerificationLink(data.verificationLink);
+        }
         return;
       }
 
       const id = data.merchantId || null;
       setVerificationLink(data.verificationLink || null);
+      setExistingUnverified(false);
       if (id) window.localStorage.setItem('merchantId', id);
       showToast('Account created successfully. Check your email to verify your address.', 'success');
 
@@ -158,6 +167,33 @@ export default function SignupPage() {
       setIsSubmitting(false);
     }
   };
+
+    const handleResendVerification = async () => {
+      setResendInProgress(true);
+      try {
+        const resp = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000'}/api/resend-verification`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ email: formData.email }),
+        });
+        const data = await resp.json();
+        if (resp.ok && data.success) {
+          showToast('Verification email resent. Check your inbox.', 'success');
+          setVerificationLink(data.verificationLink || null);
+          setExistingUnverified(false);
+        } else if (data && data.verificationLink) {
+          // API returns verificationLink when SMTP not configured
+          setVerificationLink(data.verificationLink);
+          showToast('Verification link available below. Use it to verify your account.', 'info');
+        } else {
+          showToast(data.error || 'Could not resend verification. Try again later.', 'error');
+        }
+      } catch (err) {
+        showToast('Network error while resending verification. Try again later.', 'error');
+      } finally {
+        setResendInProgress(false);
+      }
+    };
 
   return (
     <div className="min-h-screen bg-slate-950 flex items-center justify-center px-4 py-12">
@@ -312,6 +348,26 @@ export default function SignupPage() {
               <p className="font-semibold text-slate-200">Verification link</p>
               <p className="break-all">{verificationLink}</p>
               <p className="mt-2 text-slate-500">Use this link to verify your email if the email service is not configured.</p>
+            </div>
+          ) : null}
+          {existingUnverified ? (
+            <div className="mt-3 rounded-2xl border border-yellow-600/20 bg-yellow-900/5 p-3 text-sm text-yellow-200">
+              <p className="font-semibold text-yellow-200">Account requires email verification</p>
+              <p className="mt-1 text-yellow-300">An account with this email already exists but is not verified.</p>
+              <div className="mt-3 flex gap-2">
+                <button
+                  onClick={handleResendVerification}
+                  disabled={resendInProgress}
+                  className="rounded-md bg-emerald-400 px-3 py-2 text-sm font-semibold text-slate-950 hover:bg-emerald-300 disabled:opacity-50"
+                >
+                  {resendInProgress ? 'Resending...' : 'Resend verification email'}
+                </button>
+                {verificationLink ? (
+                  <a href={verificationLink} target="_blank" rel="noreferrer" className="text-emerald-300 underline self-center text-sm">
+                    Open verification link
+                  </a>
+                ) : null}
+              </div>
             </div>
           ) : null}
           {/* Sign In Link */}
