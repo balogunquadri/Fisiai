@@ -58,7 +58,7 @@ const sendViaBrevo = async (recipientEmail, verificationLink, fromAddress) => {
       },
       timeout: 15000,
     });
-    // Brevo (Sendinblue) returns 201/202 on success
+    // Brevo returns 201/202 on success
     if (res.status >= 200 && res.status < 300) {
       return true;
     }
@@ -73,14 +73,14 @@ const sendViaBrevo = async (recipientEmail, verificationLink, fromAddress) => {
 const sendVerificationEmail = async (recipientEmail, verificationLink) => {
   const fromAddress = process.env.EMAIL_FROM || `no-reply@${process.env.EMAIL_DOMAIN || 'localhost'}`;
 
-  // Prefer Brevo HTTP API if API key is configured
+  // Try Brevo HTTP API first (preferred)
   if (process.env.BREVO_API_KEY || process.env.SENDINBLUE_API_KEY) {
     try {
       const ok = await sendViaBrevo(recipientEmail, verificationLink, fromAddress);
       if (ok) return true;
-      // fallback to SMTP transporter if Brevo fails
+      console.log('Brevo API failed, attempting SMTP fallback...');
     } catch (err) {
-      console.error('Brevo attempt failed:', err.message || err);
+      console.warn('Brevo attempt failed:', err.message || err);
     }
   }
 
