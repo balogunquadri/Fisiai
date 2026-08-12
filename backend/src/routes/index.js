@@ -5,6 +5,7 @@
 
 const webhookRoutes = require('./webhooks');
 const dashboardRoutes = require('./dashboard');
+const assistantRoutes = require('./assistant');
 const adminRoutes = require('./admin');
 const analyticsRoutes = require('./analytics');
 const leadsRoutes = require('./leads');
@@ -33,6 +34,10 @@ function mountRoutes(app) {
   console.log('  ✓ GET /api/dashboard/:merchantId/customers - Customer records');
   console.log('  ✓ GET /api/dashboard/:merchantId/tasks - Task workflow list');
   console.log('  ✓ GET /api/dashboard/:merchantId/activity - Activity log');
+
+  // Website assistant route (Gemini AI widget)
+  app.use('/api/assistant', assistantRoutes);
+  console.log('  ✓ POST /api/assistant - Website Gemini assistant');
 
   // Admin routes (admin-only system monitoring)
   app.use('/api/admin', adminRoutes);

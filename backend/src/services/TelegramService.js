@@ -14,6 +14,7 @@ const batchWriteService = require('./batchWriteService');
 const cacheService = require('./cacheService');
 const receiptGenerator = require('./receiptGenerator');
 const CustomerBroadcastEvent = require('../models/CustomerBroadcastEvent');
+const { webhookQueue } = require('./queue');
 
 class TelegramService {
   constructor() {
@@ -1594,17 +1595,28 @@ ${lines}`;
       return true;
     }
 
-    // For non-command text messages, send help
-    if (message.type === 'text') {
-      await this.sendTextMessage(
-        chatId,
-        `💬 Thanks for your message\!\n\nThis bot helps you record daily sales with text, voice notes, or images, generate receipts and invoices, and track payment updates in one place. Use /menu to start logging business activity.`,
-        merchant?._id,
-        [[{ text: '📋 Main Menu', callback_data: 'menu_main' }]]
-      );
+    // Send any non-command message to the Gemini-powered AI bot, including media
+    const isDuplicate = await WhatsAppService.recordProcessedWebhookMessage(message, merchant?._id).catch(() => false);
+    if (isDuplicate) {
       return true;
     }
 
+    try {
+      const job = await webhookQueue.add('process-webhook-message', {
+        merchant,
+        messageData: message,
+      }, {
+        priority: 10,
+        attempts: 3,
+        backoff: { type: 'exponential', delay: 2000 },
+        removeOnComplete: true,
+        removeOnFail: false,
+      });
+      console.log(`✓ Enqueued Telegram AI message job ${job.id} for ${message.from}`);
+    } catch (err) {
+      console.error('✗ Failed to enqueue Telegram AI message:', err.message || err);
+      await this.sendTextMessage(chatId, '⚠️ Sorry, I could not process your message right now. Please try again in a moment.', merchant?._id);
+    }
     return true;
   }
 }

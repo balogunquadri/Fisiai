@@ -1,8 +1,6 @@
 const mongoose = require('mongoose');
 const Task = require('../models/Task');
 const Merchant = require('../models/Merchant');
-const WhatsAppService = require('./WhatsAppService');
-const TelegramService = require('./TelegramService');
 const ActivityLog = require('../models/ActivityLog');
 
 function normalizeTaskPayload(payload = {}) {
@@ -142,11 +140,13 @@ async function sendTaskInvite(taskId, merchantId) {
     if (!task.invite.recipientPhone) {
       throw new Error('WhatsApp recipient phone is required to send task invite');
     }
+    const WhatsAppService = require('./WhatsAppService');
     result = await WhatsAppService.sendTextMessage(task.invite.recipientPhone, text, merchantId);
   } else if (task.invite.channel === 'telegram') {
     if (!task.invite.recipientChatId) {
       throw new Error('Telegram chat ID is required to send task invite');
     }
+    const TelegramService = require('./TelegramService');
     const keyboard = [[
       { text: '✅ Accept Task', callback_data: `task_accept_${task._id}` },
       { text: '❌ Decline Task', callback_data: `task_decline_${task._id}` },
@@ -273,8 +273,10 @@ async function processTaskResponseFromText(messageData, merchantId) {
     : `❌ Task *${task.title}* declined. The merchant will see the task status updated in the dashboard.`;
 
   if (messageData.source === 'telegram') {
+    const TelegramService = require('./TelegramService');
     await TelegramService.sendTextMessage(messageData.chatId || messageData.recipientChatId, replyText, merchantId);
   } else {
+    const WhatsAppService = require('./WhatsAppService');
     await WhatsAppService.sendTextMessage(messageData.from, replyText, merchantId);
   }
 

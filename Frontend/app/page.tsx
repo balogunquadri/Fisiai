@@ -1,6 +1,7 @@
 import Image from 'next/image';
 import Link from 'next/link';
 import MessagingCTA from './components/MessagingCTA';
+import SideAssistantWidget from './components/SideAssistantWidget';
 
 
 const features = [
@@ -31,8 +32,9 @@ const testimonials = [
 
 export default function Home() {
   return (
-    <main className="relative overflow-hidden bg-slate-950 text-slate-100">
-      <div className="pointer-events-none absolute inset-x-0 top-0 h-72 bg-[radial-gradient(circle_at_top,_rgba(16,185,129,0.15),_transparent_35%)]" />
+    <>
+      <main className="relative overflow-hidden bg-slate-950 text-slate-100">
+        <div className="pointer-events-none absolute inset-x-0 top-0 h-72 bg-[radial-gradient(circle_at_top,_rgba(16,185,129,0.15),_transparent_35%)]" />
       <div className="pointer-events-none absolute right-[-10rem] top-1/4 h-[40rem] w-[40rem] rounded-full bg-sky-500/10 blur-3xl" />
       <div className="pointer-events-none absolute left-[-8rem] top-[50%] h-[32rem] w-[32rem] rounded-full bg-emerald-400/10 blur-3xl" />
 
@@ -213,5 +215,7 @@ export default function Home() {
         </section>
       </div>
     </main>
+    <SideAssistantWidget />
+  </>
   );
 }

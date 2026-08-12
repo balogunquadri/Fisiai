@@ -43,10 +43,10 @@ export type MessagingProvider = 'whatsapp' | 'telegram';
 export const whatsappCtaVariants: Record<string, WhatsAppCTAVariant> = {
   homepage: {
     name: 'homepage',
-    message: 'Hi! I want to record daily sales, receipts, invoices, and payments with Fisi Ai on WhatsApp.',
+    message: 'Hi! I want to ask Fisi AI about inventory, receipts, payments, or stock updates.',
     variant: 'button',
-    label: 'Start recording sales on WhatsApp',
-    description: 'Chat with us directly on WhatsApp to log sales by text, voice note, or photo.',
+    label: 'Ask Fisi AI on WhatsApp',
+    description: 'Chat with Fisi AI on WhatsApp for inventory and payment help.',
   },
   signupFlow: {
     name: 'signupFlow',
@@ -93,10 +93,10 @@ export const whatsappCtaVariants: Record<string, WhatsAppCTAVariant> = {
 export const telegramCtaVariants: Record<string, TelegramCTAVariant> = {
   homepage: {
     name: 'homepage',
-    message: 'Hi! I want to record daily sales, receipts, invoices, and payments with Fisi Ai on Telegram.',
+    message: 'Hi! I want to ask Fisi AI about inventory, receipts, payments, or stock updates.',
     variant: 'button',
-    label: 'Start recording sales on Telegram',
-    description: 'Chat with us directly on Telegram to log sales by text, voice note, or photo.',
+    label: 'Ask Fisi AI on Telegram',
+    description: 'Chat with Fisi AI on Telegram for inventory and payment help.',
   },
   signupFlow: {
     name: 'signupFlow',
