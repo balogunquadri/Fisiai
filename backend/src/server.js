@@ -34,7 +34,9 @@ if (process.env.EMBEDDED_WORKERS === 'true') {
 // SECURITY MIDDLEWARE
 // ============================================
 app.use(helmet());
-const allowedOrigins = (process.env.CORS_ORIGINS || 'http://localhost:3000,http://localhost:3001')
+const allowedOrigins = (
+  process.env.CORS_ORIGINS || process.env.CORS_ORIGIN || 'http://localhost:3000,http://localhost:3001'
+)
   .split(',')
   .map((origin) => origin.trim())
   .filter(Boolean);
