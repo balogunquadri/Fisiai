@@ -1,0 +1,12 @@
+{
+  "name": "e2e-playwright",
+  "version": "1.0.0",
+  "private": true,
+  "devDependencies": {
+    "@playwright/test": "^1.62.1"
+  },
+  "scripts": {
+    "test": "playwright test",
+    "install-browsers": "playwright install"
+  }
+}

@@ -18,7 +18,7 @@ export default function SideAssistantWidget() {
   const [error, setError] = useState('');
 
   const whatsappUrl = useMemo(
-    () => buildWhatsAppUrl(process.env.NEXT_PUBLIC_WHATSAPP_BUSINESS_PHONE || '+15551433845', 'Hello! I would like help from the FisiAI web assistant.'),
+    () => buildWhatsAppUrl(process.env.NEXT_PUBLIC_WHATSAPP_BUSINESS_PHONE || process.env.NEXT_PUBLIC_WHATSAPP_PHONE_NUMBER || '+2347086024885', 'Hello! I would like help from the FisiAI web assistant.'),
     []
   );
   const telegramUrl = useMemo(
