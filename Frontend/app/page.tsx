@@ -2,6 +2,7 @@ import Image from 'next/image';
 import Link from 'next/link';
 import MessagingCTA from './components/MessagingCTA';
 import SideAssistantWidget from './components/SideAssistantWidget';
+import PublicHeader from './components/PublicHeader';
 
 
 const features = [
@@ -39,22 +40,7 @@ export default function Home() {
       <div className="pointer-events-none absolute left-[-8rem] top-[50%] h-[32rem] w-[32rem] rounded-full bg-emerald-400/10 blur-3xl" />
 
       <div className="relative mx-auto max-w-7xl px-6 py-8 sm:px-10 lg:px-12">
-        <nav className="flex flex-col gap-6 border-b border-white/10 pb-6 sm:flex-row sm:items-center sm:justify-between">
-          <div className="flex items-center gap-3 text-white">
-            <span className="inline-flex h-10 w-10 items-center justify-center rounded-2xl bg-emerald-400 text-slate-950 font-bold">SA</span>
-            <div>
-              <p className="text-sm font-semibold leading-none">Fisi Ai</p>
-              <p className="text-xs text-slate-400">Smart stock, simple sales</p>
-            </div>
-          </div>
-          <div className="flex flex-wrap items-center gap-4 text-sm text-slate-300 sm:gap-6">
-            <a href="#features" className="transition hover:text-white">Features</a>
-            <a href="#how-it-works" className="transition hover:text-white">How it works</a>
-            <a href="#stories" className="transition hover:text-white">Merchants</a>
-            <Link href="/signin" className="transition hover:text-white">Sign in</Link>
-            <Link href="/signup" className="rounded-full bg-emerald-400 px-4 py-2 text-slate-950 font-semibold transition hover:bg-emerald-300">Sign up</Link>
-          </div>
-        </nav>
+        <PublicHeader />
 
         <section className="grid gap-14 py-16 lg:grid-cols-[1.1fr_0.9fr] lg:items-center">
           <div className="space-y-8">
