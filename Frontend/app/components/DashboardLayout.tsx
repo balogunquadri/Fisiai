@@ -17,6 +17,7 @@ export default function DashboardLayout({
   currentPage?: string;
 }) {
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [merchantName, setMerchantName] = useState('Fisi Ai');
   const [merchantLabel, setMerchantLabel] = useState('Merchant account');
   const [merchantInitials, setMerchantInitials] = useState('SA');
@@ -134,8 +135,8 @@ export default function DashboardLayout({
 
       {/* Main Content */}
       <div className="flex-1 flex flex-col overflow-hidden">
-        {/* Top Bar */}
-        <header className="border-b border-white/10 bg-slate-900/80 backdrop-blur px-6 py-4 flex items-center justify-between">
+        {/* Desktop Header */}
+        <header className="hidden md:flex border-b border-white/10 bg-slate-900/80 backdrop-blur px-6 py-4 items-center justify-between">
           <div className="flex items-center gap-4 flex-1">
             {/* Mobile Menu Toggle */}
             <button
@@ -186,6 +187,81 @@ export default function DashboardLayout({
               Sign out
             </button>
           </div>
+        </header>
+
+        {/* Mobile Header - Hamburger Dropdown */}
+        <header className="md:hidden border-b border-white/10 bg-slate-900/80 backdrop-blur px-4 py-3 relative">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <div className="rounded-lg bg-emerald-400 px-2 py-1 text-sm font-bold text-slate-950">SA</div>
+              <span className="text-sm font-semibold">Fisi Ai</span>
+            </div>
+            <button
+              onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
+              className="rounded-lg border border-white/10 p-2 hover:bg-slate-800 transition"
+            >
+              <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
+              </svg>
+            </button>
+          </div>
+
+          {/* Mobile Dropdown Menu */}
+          {mobileMenuOpen && (
+            <div className="absolute top-full left-0 right-0 bg-slate-900 border-b border-white/10 shadow-lg z-50">
+              {/* Navigation Items */}
+              <nav className="px-2 py-2 space-y-1 max-h-96 overflow-y-auto">
+                {navItems.map((item) => (
+                  <Link
+                    key={item.id}
+                    href={item.href}
+                    onClick={() => setMobileMenuOpen(false)}
+                    className={`flex items-center gap-3 rounded-lg px-4 py-2 text-sm font-medium transition ${
+                      currentPage === item.id
+                        ? 'bg-emerald-400/20 text-emerald-300 border border-emerald-400/30'
+                        : 'text-slate-300 hover:bg-slate-800/50'
+                    }`}
+                  >
+                    <span className="text-lg">{item.icon}</span>
+                    <span>{item.label}</span>
+                  </Link>
+                ))}
+              </nav>
+
+              {/* Divider */}
+              <div className="border-t border-white/10" />
+
+              {/* User Section */}
+              <div className="px-4 py-3 space-y-2">
+                <div className="flex items-center gap-3 rounded-lg border border-white/10 px-3 py-2 bg-slate-800/30">
+                  <div className="h-8 w-8 rounded-full bg-gradient-to-br from-emerald-400 to-cyan-400 flex items-center justify-center text-xs font-bold text-slate-950">
+                    {merchantInitials}
+                  </div>
+                  <div className="text-xs flex-1">
+                    <p className="font-semibold">{merchantName}</p>
+                    <p className="text-slate-400">{merchantLabel}</p>
+                  </div>
+                </div>
+                <button
+                  onClick={() => {
+                    handleSignOut();
+                    setMobileMenuOpen(false);
+                  }}
+                  className="w-full rounded-lg border border-white/10 bg-slate-800/80 px-3 py-2 text-sm text-slate-200 hover:bg-slate-700 transition"
+                >
+                  Sign out
+                </button>
+              </div>
+            </div>
+          )}
+
+          {/* Mobile Menu Overlay */}
+          {mobileMenuOpen && (
+            <div
+              className="fixed inset-0 z-40 bg-black/50"
+              onClick={() => setMobileMenuOpen(false)}
+            />
+          )}
         </header>
 
         {/* Page Content */}
