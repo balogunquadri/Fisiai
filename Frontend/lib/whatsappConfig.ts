@@ -157,7 +157,7 @@ export function getBusinessPhoneNumber(merchantPhone?: string): string {
     process.env.NEXT_PUBLIC_WHATSAPP_BUSINESS_PHONE ||
     process.env.NEXT_PUBLIC_WHATSAPP_PHONE_NUMBER ||
     process.env.NEXT_PUBLIC_SUPPORT_PHONE ||
-    '+2347086024885' // Fallback
+    '++2347086024885' // Fallback
   );
 }
 

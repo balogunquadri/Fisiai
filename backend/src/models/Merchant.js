@@ -35,6 +35,14 @@ const merchantSchema = new mongoose.Schema(
     emailVerificationTokenExpires: {
       type: Date,
     },
+    resetPasswordToken: {
+      type: String,
+      index: true,
+      select: false,
+    },
+    resetPasswordTokenExpires: {
+      type: Date,
+    },
     phone: {
       type: String,
       trim: true,
@@ -171,7 +179,19 @@ const merchantSchema = new mongoose.Schema(
     receiptColor: {
       type: String,
       trim: true,
-      default: '#000000',
+      default: '#14b8a6',
+    },
+    // Friendly color name for UX (e.g., 'teal', 'emerald')
+    receiptColorName: {
+      type: String,
+      trim: true,
+      default: 'teal',
+    },
+    // Public URL to merchant logo (served from /docs)
+    logoUrl: {
+      type: String,
+      trim: true,
+      default: '',
     },
   },
   {

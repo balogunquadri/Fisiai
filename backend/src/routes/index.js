@@ -64,6 +64,8 @@ function mountRoutes(app) {
   console.log('  ✓ POST /api/signout - End merchant session');
   console.log('  ✓ GET /api/verify-email - Verify merchant email address');
   console.log('  ✓ POST /api/resend-verification - Resend email verification link');
+  console.log('  ✓ POST /api/forgot-password - Request a password reset link');
+  console.log('  ✓ POST /api/reset-password - Reset a merchant password');
 
   console.log('✅ All routes mounted successfully\n');
 }

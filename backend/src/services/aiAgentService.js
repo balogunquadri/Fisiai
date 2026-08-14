@@ -47,6 +47,7 @@ try {
 function detectIntent(text) {
   if (!text) return null;
   const t = text.toLowerCase().trim();
+  if (t.includes('logo') && (t.includes('upload') || t.includes('set') || t.includes('change') || t.includes('add'))) return 'upload_logo';
   if (t.startsWith('update stock') || t.includes('update stock') || t.includes('stock update')) return 'update_stock';
   if (t.startsWith('add contact') || t.includes('add contact')) return 'add_contact';
   if (t.includes('generate invoice') || t.includes('create invoice') || t.includes('send invoice') || t.includes('invoice')) return 'generate_invoice';
@@ -63,6 +64,24 @@ function detectIntent(text) {
   if (t.includes('low stock') || t.includes('what is low stock') || t.includes('low on')) return 'low_stock_query';
   if (t === 'yes' || t === 'ok' || t === 'okay') return 'confirmation';
   return null;
+}
+
+async function saveMerchantLogoBuffer(merchantId, buffer, mimeType) {
+  try {
+    const ext = mimeType.includes('png') ? 'png' : mimeType.includes('jpeg') || mimeType.includes('jpg') ? 'jpg' : mimeType.includes('webp') ? 'webp' : 'png';
+    const docsDir = path.resolve(__dirname, '..', '..', 'tmp-docs');
+    const uploadsDir = path.join(docsDir, 'uploads');
+    await fs.promises.mkdir(uploadsDir, { recursive: true });
+    const filename = `merchant-logo-${merchantId}.${ext}`;
+    const filePath = path.join(uploadsDir, filename);
+    await fs.promises.writeFile(filePath, buffer);
+    const publicUrl = `/docs/uploads/${filename}`;
+    const merchant = await Merchant.findOneAndUpdate({ _id: merchantId }, { logoUrl: publicUrl }, { new: true });
+    return { success: true, logoUrl: publicUrl, merchant };
+  } catch (err) {
+    console.error('saveMerchantLogoBuffer error:', err);
+    return { success: false, error: err.message || String(err) };
+  }
 }
 
 function detectMainMenuMessage(text) {
@@ -220,6 +239,7 @@ async function createReceiptFromText(merchant, customerPhone, messageData) {
     receiptText: safeBody,
     total,
     receiptColor: merchant.receiptColor,
+    logoPath: merchant.logoUrl,
   });
 
   await sendMessageReply(customerPhone, '✅ Receipt generated. Sending PDF and PNG now...', messageData, merchant._id);
@@ -258,6 +278,7 @@ async function createInvoiceFromText(merchant, customerPhone, messageData) {
     total,
     receiptColor: merchant.receiptColor,
     invoiceNumber,
+    logoPath: merchant.logoUrl,
   });
 
   await sendMessageReply(customerPhone, '✅ Invoice generated. Sending PDF and PNG now...', messageData, merchant._id);
@@ -521,6 +542,13 @@ async function processMerchantMessage(merchant, customerPhone, messageData) {
       console.log(`ℹ Reusing session intent: ${intent}`);
     }
 
+    // If user explicitly asked to upload logo via text, start upload flow
+    if (intent === 'upload_logo' && messageData.type === 'text') {
+      await cacheService.setSession(merchant._id, sessionPhone, { intent: 'upload_logo', createdAt: Date.now() }, 900);
+      await sendMessageReply(customerPhone, 'Please send the logo image now (attach an image to this chat).', messageData, merchant._id);
+      return true;
+    }
+
     let inputContent = '';
     let mediaBuffer = null;
     let mimeType = '';
@@ -536,6 +564,24 @@ async function processMerchantMessage(merchant, customerPhone, messageData) {
         mediaBuffer = result.buffer;
         mimeType = result.mimeType;
         inputContent = result.text || `[${messageData.type} uploaded]`;
+      }
+    }
+
+    // If this media was uploaded as part of an upload_logo flow, save it as merchant logo
+    if (mediaBuffer && (intent === 'upload_logo' || (session && session.intent === 'upload_logo'))) {
+      // Persist logo file and update merchant record
+      const saveRes = await saveMerchantLogoBuffer(merchant._id, mediaBuffer, mimeType || 'image/png');
+      if (saveRes && saveRes.success) {
+        const reply = '✅ Logo uploaded and set for your account. It will appear on future receipts and invoices.';
+        await sendMessageReply(customerPhone, reply, messageData, merchant._id);
+        batchWriteService.bufferChatMessage(merchant._id, customerPhone, reply, 'text', 'outbound', null, messageData.source || 'whatsapp', messageData.chatId || null, messageData.chatUsername || null);
+        // clear upload session
+        await cacheService.delSession(merchant._id, sessionPhone);
+        return true;
+      } else {
+        const reply = '⚠️ Failed to save logo. Please try again.';
+        await sendMessageReply(customerPhone, reply, messageData, merchant._id);
+        return true;
       }
     }
 

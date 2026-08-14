@@ -26,6 +26,9 @@ const TelegramService = require('../services/TelegramService');
 const DeliveryPartnerService = require('../services/deliveryPartnerService');
 const { buildDashboardSummary } = require('../services/dashboardService');
 const { requireAuth, requireMerchantMatch } = require('../middleware/authMiddleware');
+const fs = require('fs');
+const path = require('path');
+const sharp = require('sharp');
 
 async function personalizeMessage(template, customer) {
   return template
@@ -174,6 +177,8 @@ router.get('/:merchantId', requireMerchantMatch, async (req, res) => {
         whatsappBusinessName: merchant.whatsappBusinessName,
         telegramBotUsername: merchant.telegramBotUsername,
         telegramChatId: merchant.telegramChatId,
+        receiptColor: merchant.receiptColor,
+        receiptColorName: merchant.receiptColorName || null,
       },
       kpis: {
         lowStockCount,
@@ -207,6 +212,147 @@ router.get('/:merchantId', requireMerchantMatch, async (req, res) => {
   } catch (error) {
     console.error('Error fetching dashboard:', error);
     return res.status(500).json({ error: 'Failed to fetch dashboard data' });
+  }
+});
+
+/**
+ * PUT /api/dashboard/:merchantId/settings
+ * Update merchant settings (appearance, receipt color, etc.)
+ */
+router.put('/:merchantId/settings', requireMerchantMatch, async (req, res) => {
+  try {
+    const { merchantId } = req.params;
+    const { receiptColor, receiptColorName, businessAddress, name } = req.body || {};
+
+    const update = {};
+    if (typeof receiptColor === 'string' && receiptColor.trim()) update.receiptColor = receiptColor.trim();
+    if (typeof receiptColorName === 'string' && receiptColorName.trim()) update.receiptColorName = receiptColorName.trim();
+    if (typeof businessAddress === 'string') update.businessAddress = businessAddress.trim();
+    if (typeof name === 'string') update.name = name.trim();
+
+    if (Object.keys(update).length === 0) return res.status(400).json({ success: false, error: 'No valid settings provided' });
+
+    const merchant = await Merchant.findOneAndUpdate({ _id: merchantId }, update, { new: true });
+    if (!merchant) return res.status(404).json({ success: false, error: 'Merchant not found' });
+
+    return res.json({ success: true, merchant: { id: merchant._id, receiptColor: merchant.receiptColor, name: merchant.name, businessAddress: merchant.businessAddress } });
+  } catch (error) {
+    console.error('Error updating merchant settings:', error);
+    return res.status(500).json({ success: false, error: 'Failed to update settings' });
+  }
+});
+
+/**
+ * POST /api/dashboard/:merchantId/logo
+ * Body: { logoData: 'data:image/png;base64,...' }
+ * Stores logo under tmp-docs/uploads and sets merchant.logoUrl to a public /docs path
+ */
+router.post('/:merchantId/logo', requireMerchantMatch, async (req, res) => {
+  try {
+    const { merchantId } = req.params;
+    const { logoData } = req.body || {};
+    if (!logoData || typeof logoData !== 'string') return res.status(400).json({ success: false, error: 'logoData (data URL) required' });
+    // Parse data URL
+    const match = logoData.match(/^data:(image\/(png|jpeg|jpg|webp));base64,(.+)$/);
+    if (!match) return res.status(400).json({ success: false, error: 'Invalid data URL' });
+
+    const inputMime = match[1];
+    const inputExt = match[2] === 'jpeg' ? 'jpg' : match[2];
+    const b64 = match[3];
+    let buffer = Buffer.from(b64, 'base64');
+
+    const MAX_BYTES = 200 * 1024; // 200 KB
+    const MAX_WIDTH = 300;
+    const MAX_HEIGHT = 150;
+
+    // Attempt to resize/compress when too large or dimensions exceed limits
+    try {
+      let image = sharp(buffer);
+      const meta = await image.metadata().catch(() => ({}));
+      const needsResize = (meta.width && meta.width > MAX_WIDTH) || (meta.height && meta.height > MAX_HEIGHT);
+
+      if (needsResize || buffer.length > MAX_BYTES) {
+        // Resize to fit within max dimensions
+        image = image.resize({ width: MAX_WIDTH, height: MAX_HEIGHT, fit: 'inside' });
+
+        // First try to output PNG to preserve transparency
+        let outBuf = await image.png({ compressionLevel: 9 }).toBuffer();
+
+        // If still too large, convert to JPEG with progressively lower quality
+        if (outBuf.length > MAX_BYTES) {
+          let quality = 80;
+          while (quality >= 30) {
+            outBuf = await image.jpeg({ quality }).toBuffer();
+            if (outBuf.length <= MAX_BYTES) break;
+            quality -= 15;
+          }
+        }
+
+        // If still too large, accept the compressed buffer (best effort)
+        buffer = outBuf;
+      }
+    } catch (err) {
+      console.warn('Logo processing failed, using original buffer:', err && err.message ? err.message : err);
+    }
+
+    // Ensure target directory exists
+    const docsDir = path.resolve(__dirname, '..', '..', 'tmp-docs');
+    const uploadsDir = path.join(docsDir, 'uploads');
+    await fs.promises.mkdir(uploadsDir, { recursive: true });
+
+    // Choose extension based on final buffer (if JPEG header detected, use jpg)
+    let finalExt = inputExt;
+    try {
+      const hdr = buffer.slice(0, 4).toString('hex');
+      if (hdr.startsWith('ffd8')) finalExt = 'jpg';
+      else if (hdr.startsWith('89504e47')) finalExt = 'png';
+      else if (hdr.startsWith('52494646')) finalExt = 'webp';
+    } catch (e) {
+      /* ignore */
+    }
+
+    const filename = `merchant-logo-${merchantId}.${finalExt}`;
+    const filePath = path.join(uploadsDir, filename);
+    await fs.promises.writeFile(filePath, buffer);
+
+    const publicUrl = `/docs/uploads/${filename}`;
+    const merchant = await Merchant.findOneAndUpdate({ _id: merchantId }, { logoUrl: publicUrl }, { new: true });
+    if (!merchant) return res.status(404).json({ success: false, error: 'Merchant not found' });
+
+    return res.json({ success: true, logoUrl: publicUrl, size: buffer.length });
+  } catch (error) {
+    console.error('Error uploading logo:', error);
+    return res.status(500).json({ success: false, error: 'Failed to upload logo' });
+  }
+});
+
+/**
+ * DELETE /api/dashboard/:merchantId/logo
+ * Remove merchant logo file and clear merchant.logoUrl
+ */
+router.delete('/:merchantId/logo', requireMerchantMatch, async (req, res) => {
+  try {
+    const { merchantId } = req.params;
+    const merchant = await Merchant.findById(merchantId);
+    if (!merchant) return res.status(404).json({ success: false, error: 'Merchant not found' });
+    const logoUrl = merchant.logoUrl;
+    if (logoUrl && typeof logoUrl === 'string') {
+      const docsRoot = path.resolve(__dirname, '..', '..', 'tmp-docs');
+      const rel = logoUrl.replace(/^\/docs\//, '');
+      const absolute = path.join(docsRoot, rel.replace(/\//g, path.sep));
+      try {
+        if (fs.existsSync(absolute)) await fs.promises.unlink(absolute);
+      } catch (e) {
+        console.warn('Failed to delete logo file:', e && e.message ? e.message : e);
+      }
+    }
+
+    merchant.logoUrl = '';
+    await merchant.save();
+    return res.json({ success: true });
+  } catch (error) {
+    console.error('Error deleting logo:', error);
+    return res.status(500).json({ success: false, error: 'Failed to delete logo' });
   }
 });
 

@@ -5,11 +5,13 @@ import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import DashboardLayout from '../components/DashboardLayout';
 import FinancialSummary from '../components/FinancialSummary';
+import ColorPicker from '../components/ColorPicker';
 import { DashboardStats, SalesChart, RestockAlert } from '../components/DashboardComponents';
 import {
   fetchAnalyticsInsights,
   fetchChatHistory,
   fetchDashboardSummary,
+  fetchMerchantOverview,
   fetchInventory,
   fetchLeads,
   createInventoryItem,
@@ -116,6 +118,26 @@ export default function DashboardPage() {
           fetchChatHistory(),
           fetchAnalyticsInsights(),
         ]);
+
+        // Also fetch merchant overview to pick up saved color preferences
+        let merchantOverview = null;
+        try {
+          merchantOverview = await fetchMerchantOverview(merchantId || undefined);
+          if (merchantOverview && merchantOverview.merchant) {
+            const rc = (merchantOverview.merchant as any).receiptColor;
+            const rcName = (merchantOverview.merchant as any).receiptColorName;
+            const logo = (merchantOverview.merchant as any).logoUrl;
+            if (typeof window !== 'undefined' && (rc || rcName || logo)) {
+              if (rcName) window.localStorage.setItem('receiptAccentColorName', rcName);
+              if (rc) window.localStorage.setItem('receiptAccentColorHex', rc);
+              if (logo) window.localStorage.setItem('merchantLogoUrl', logo);
+            }
+          }
+        } catch (err) {
+          // Non-fatal; continue
+          console.warn('Could not fetch merchant overview for color:', err);
+        }
+
         if (isMounted) {
           setSummaryData(summaryResponse);
           setChatData(chatResponse);
@@ -488,6 +510,12 @@ export default function DashboardPage() {
                     Review chat
                   </Link>
                 </div>
+              </div>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              <div className="md:col-span-1">
+                <ColorPicker />
               </div>
             </div>
 

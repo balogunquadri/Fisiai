@@ -1,4 +1,6 @@
 const sharp = require('sharp');
+const fs = require('fs');
+const path = require('path');
 
 function escapeXml(text) {
   return String(text || '')
@@ -10,16 +12,63 @@ function escapeXml(text) {
 }
 
 function normalizeColor(color) {
-  if (!color || typeof color !== 'string') return '#000000';
-  const normalized = color.trim();
-  const match = normalized.match(/^#?([0-9A-Fa-f]{6})$/);
-  return match ? `#${match[1]}` : '#000000';
+  if (!color || typeof color !== 'string') return '#14b8a6';
+  const normalized = color.trim().toLowerCase();
+
+  // Friendly named palette (user-visible names -> hex)
+  const PALETTE = {
+    teal: '#14b8a6',
+    emerald: '#10b981',
+    sky: '#0ea5e9',
+    indigo: '#6366f1',
+    violet: '#8b5cf6',
+    rose: '#fb7185',
+    amber: '#f59e0b',
+    lime: '#84cc16',
+    slate: '#64748b',
+    slategray: '#64748b',
+    blue: '#2563eb',
+    green: '#10b981',
+    pink: '#ec4899',
+    red: '#ef4444',
+    orange: '#fb923c',
+    charcoal: '#0f172a',
+    black: '#000000',
+    white: '#ffffff',
+  };
+
+  // direct palette lookup
+  if (PALETTE[normalized]) return PALETTE[normalized];
+
+  // hex like formats
+  const match = normalized.match(/^#?([0-9a-f]{6})$/i);
+  if (match) return `#${match[1]}`;
+
+  // fallback
+  return '#14b8a6';
 }
 
-function buildReceiptSvg({ businessName, businessAddress, receiptLines, total, receiptColor }) {
+function hexToRgb(hex) {
+  const hexClean = hex.replace('#', '');
+  const r = parseInt(hexClean.substring(0, 2), 16);
+  const g = parseInt(hexClean.substring(2, 4), 16);
+  const b = parseInt(hexClean.substring(4, 6), 16);
+  return { r, g, b };
+}
+
+function lightenHex(hex, percent) {
+  const { r, g, b } = hexToRgb(hex);
+  const newR = Math.round(r + (255 - r) * percent);
+  const newG = Math.round(g + (255 - g) * percent);
+  const newB = Math.round(b + (255 - b) * percent);
+  return '#' + [newR, newG, newB].map((v) => v.toString(16).padStart(2, '0')).join('');
+}
+
+function buildReceiptSvg({ businessName, businessAddress, receiptLines, total, receiptColor, logoPath }) {
   const safeName = escapeXml(businessName || 'Your Business');
   const safeAddress = escapeXml(businessAddress || 'No address provided');
   const safeColor = normalizeColor(receiptColor);
+  const accentLight = lightenHex(safeColor, 0.7);
   const lines = [
     `Receipt for ${safeName}`,
     safeAddress,
@@ -38,25 +87,60 @@ function buildReceiptSvg({ businessName, businessAddress, receiptLines, total, r
 
   const textElements = lines
     .map((line, index) => {
-      const y = paddingTop + index * lineHeight;
       return `<tspan x="60" dy="${index === 0 ? '0' : '1.2em'}">${line}</tspan>`;
     })
     .join('');
 
+  // If a logoPath is provided and exists, read and embed as data URL
+  let logoImageTag = '';
+  try {
+    if (logoPath) {
+      const docsRoot = path.resolve(__dirname, '..', '..', 'tmp-docs');
+      // logoPath is expected like '/docs/uploads/merchant-logo-<id>.png'
+      const rel = logoPath.replace(/^\/docs\//, '');
+      const absolute = path.join(docsRoot, rel.replace(/\//g, path.sep));
+      if (fs.existsSync(absolute)) {
+        const imgBuf = fs.readFileSync(absolute);
+        const ext = path.extname(absolute).substring(1) || 'png';
+        const mime = ext === 'jpg' ? 'jpeg' : ext;
+        const dataUri = `data:image/${mime};base64,${imgBuf.toString('base64')}`;
+        // Place logo in top-right corner
+        logoImageTag = `<image x="${1200 - 240}" y="60" width="160" height="80" href="${dataUri}" preserveAspectRatio="xMidYMid meet" />`;
+      }
+    }
+  } catch (err) {
+    console.warn('Failed to embed logo:', err && err.message ? err.message : err);
+  }
+
   return `<?xml version="1.0" encoding="UTF-8"?>
 <svg width="${width}" height="${height}" viewBox="0 0 ${width} ${height}" xmlns="http://www.w3.org/2000/svg">
-  <rect width="100%" height="100%" fill="#ffffff" />
-  <rect x="40" y="40" width="${width - 80}" height="${height - 80}" rx="28" fill="#f8f8f8" stroke="${titleColor}" stroke-width="4" />
-  <text x="60" y="100" font-family="Arial, Helvetica, sans-serif" font-size="42" font-weight="700" fill="${titleColor}">${escapeXml('RECEIPT')}</text>
-  <text x="60" y="160" font-family="Arial, Helvetica, sans-serif" font-size="32" fill="#333333">${escapeXml('Business')}:</text>
-  <text x="220" y="160" font-family="Arial, Helvetica, sans-serif" font-size="32" fill="#333333">${safeName}</text>
-  <text x="60" y="210" font-family="Arial, Helvetica, sans-serif" font-size="24" fill="#666666">${safeAddress}</text>
-  <text x="60" y="280" font-family="Arial, Helvetica, sans-serif" font-size="28" fill="#222222">
-    ${textElements}
-  </text>
-  <rect x="60" y="${height - paddingBottom + 10}" width="${width - 120}" height="4" fill="${titleColor}" />
-  <text x="60" y="${height - paddingBottom + 70}" font-family="Arial, Helvetica, sans-serif" font-size="32" font-weight="700" fill="#222222">Total: ${escapeXml(total || 'N/A')}</text>
-  <text x="60" y="${height - paddingBottom + 120}" font-family="Arial, Helvetica, sans-serif" font-size="20" fill="#888888">Generated by FisiAI</text>
+  <defs>
+    <linearGradient id="g" x1="0" x2="1" y1="0" y2="1">
+      <stop offset="0%" stop-color="${titleColor}" stop-opacity="0.95" />
+      <stop offset="100%" stop-color="${accentLight}" stop-opacity="0.9" />
+    </linearGradient>
+    <filter id="shadow" x="-20%" y="-20%" width="140%" height="140%">
+      <feDropShadow dx="0" dy="8" stdDeviation="18" flood-color="#000" flood-opacity="0.15" />
+    </filter>
+  </defs>
+  <rect width="100%" height="100%" fill="#f6f7fb" />
+  <g filter="url(#shadow)">
+    <rect x="40" y="40" width="${width - 80}" height="${height - 80}" rx="28" fill="url(#g)" />
+  </g>
+  <rect x="40" y="40" width="${width - 80}" height="150" rx="24" fill="${titleColor}" opacity="0.06" />
+  <text x="60" y="110" font-family="Arial, Helvetica, sans-serif" font-size="42" font-weight="700" fill="${titleColor}">${escapeXml('RECEIPT')}</text>
+  ${logoImageTag}
+  <text x="60" y="160" font-family="Arial, Helvetica, sans-serif" font-size="26" fill="#374151">${escapeXml('Business')}:</text>
+  <text x="220" y="160" font-family="Arial, Helvetica, sans-serif" font-size="26" fill="#111827">${safeName}</text>
+  <text x="60" y="200" font-family="Arial, Helvetica, sans-serif" font-size="18" fill="#6b7280">${safeAddress}</text>
+  <g transform="translate(0,40)">
+    <text x="60" y="260" font-family="Arial, Helvetica, sans-serif" font-size="20" fill="#111827">
+      ${textElements}
+    </text>
+  </g>
+  <rect x="60" y="${height - paddingBottom + 10}" width="${width - 120}" height="6" rx="3" fill="#ffffff" opacity="0.15" />
+  <text x="60" y="${height - paddingBottom + 70}" font-family="Arial, Helvetica, sans-serif" font-size="32" font-weight="700" fill="#0f172a">Total: ${escapeXml(total || 'N/A')}</text>
+  <text x="60" y="${height - paddingBottom + 120}" font-family="Arial, Helvetica, sans-serif" font-size="16" fill="#9ca3af">Generated by FisiAI</text>
 </svg>`;
 }
 
@@ -90,7 +174,7 @@ async function createPdfFromJpegBuffer(jpegBuffer, width, height) {
   return Buffer.concat([header, ...objects, xref, trailer]);
 }
 
-async function generateReceiptAssets({ businessName, businessAddress, receiptText, total, receiptColor }) {
+async function generateReceiptAssets({ businessName, businessAddress, receiptText, total, receiptColor, logoPath }) {
   const lines = receiptText
     ? receiptText.split(/\n|\r\n|\|/).map((line) => line.trim()).filter(Boolean)
     : ['No receipt details provided.'];
@@ -101,6 +185,7 @@ async function generateReceiptAssets({ businessName, businessAddress, receiptTex
     receiptLines: lines,
     total,
     receiptColor,
+    logoPath,
   });
 
   const svgBuffer = Buffer.from(svg, 'utf8');
@@ -119,10 +204,11 @@ async function generateReceiptAssets({ businessName, businessAddress, receiptTex
   return { pngBuffer, pdfBuffer };
 }
 
-function buildInvoiceSvg({ businessName, businessAddress, invoiceLines, total, receiptColor, invoiceNumber }) {
+function buildInvoiceSvg({ businessName, businessAddress, invoiceLines, total, receiptColor, invoiceNumber, logoPath }) {
   const safeName = escapeXml(businessName || 'Your Business');
   const safeAddress = escapeXml(businessAddress || 'No address provided');
   const safeColor = normalizeColor(receiptColor);
+  const accentLight = lightenHex(safeColor, 0.7);
   const safeInvoiceNumber = escapeXml(invoiceNumber || `INV-${Date.now()}`);
   const lines = [
     `Invoice Number: ${safeInvoiceNumber}`,
@@ -143,6 +229,25 @@ function buildInvoiceSvg({ businessName, businessAddress, invoiceLines, total, r
   const height = paddingTop + paddingBottom + lines.length * lineHeight;
   const titleColor = safeColor;
 
+  // Try to read and embed logo
+  let logoImageTag = '';
+  try {
+    if (logoPath) {
+      const docsRoot = path.resolve(__dirname, '..', '..', 'tmp-docs');
+      const rel = logoPath.replace(/^\/docs\//, '');
+      const absolute = path.join(docsRoot, rel.replace(/\//g, path.sep));
+      if (fs.existsSync(absolute)) {
+        const imgBuf = fs.readFileSync(absolute);
+        const ext = path.extname(absolute).substring(1) || 'png';
+        const mime = ext === 'jpg' ? 'jpeg' : ext;
+        const dataUri = `data:image/${mime};base64,${imgBuf.toString('base64')}`;
+        logoImageTag = `<image x="${1200 - 240}" y="60" width="160" height="80" href="${dataUri}" preserveAspectRatio="xMidYMid meet" />`;
+      }
+    }
+  } catch (err) {
+    console.warn('Failed to embed logo:', err && err.message ? err.message : err);
+  }
+
   const textElements = lines
     .map((line, index) => {
       return `<tspan x="60" dy="${index === 0 ? '0' : '1.2em'}">${line}</tspan>`;
@@ -151,22 +256,37 @@ function buildInvoiceSvg({ businessName, businessAddress, invoiceLines, total, r
 
   return `<?xml version="1.0" encoding="UTF-8"?>
 <svg width="${width}" height="${height}" viewBox="0 0 ${width} ${height}" xmlns="http://www.w3.org/2000/svg">
-  <rect width="100%" height="100%" fill="#ffffff" />
-  <rect x="40" y="40" width="${width - 80}" height="${height - 80}" rx="28" fill="#f8f8f8" stroke="${titleColor}" stroke-width="4" />
-  <text x="60" y="100" font-family="Arial, Helvetica, sans-serif" font-size="42" font-weight="700" fill="${titleColor}">${escapeXml('INVOICE')}</text>
-  <text x="60" y="160" font-family="Arial, Helvetica, sans-serif" font-size="32" fill="#333333">${escapeXml('Business')}:</text>
-  <text x="220" y="160" font-family="Arial, Helvetica, sans-serif" font-size="32" fill="#333333">${safeName}</text>
-  <text x="60" y="210" font-family="Arial, Helvetica, sans-serif" font-size="24" fill="#666666">${safeAddress}</text>
-  <text x="60" y="280" font-family="Arial, Helvetica, sans-serif" font-size="28" fill="#222222">
-    ${textElements}
-  </text>
-  <rect x="60" y="${height - paddingBottom + 10}" width="${width - 120}" height="4" fill="${titleColor}" />
-  <text x="60" y="${height - paddingBottom + 70}" font-family="Arial, Helvetica, sans-serif" font-size="32" font-weight="700" fill="#222222">Total Due: ${escapeXml(total || 'N/A')}</text>
-  <text x="60" y="${height - paddingBottom + 120}" font-family="Arial, Helvetica, sans-serif" font-size="20" fill="#888888">Generated by FisiAI</text>
+  <defs>
+    <linearGradient id="gi" x1="0" x2="1" y1="0" y2="1">
+      <stop offset="0%" stop-color="${titleColor}" stop-opacity="0.95" />
+      <stop offset="100%" stop-color="${accentLight}" stop-opacity="0.9" />
+    </linearGradient>
+    <filter id="shadowi" x="-20%" y="-20%" width="140%" height="140%">
+      <feDropShadow dx="0" dy="8" stdDeviation="18" flood-color="#000" flood-opacity="0.12" />
+    </filter>
+  </defs>
+  <rect width="100%" height="100%" fill="#f6f7fb" />
+  <g filter="url(#shadowi)">
+    <rect x="40" y="40" width="${width - 80}" height="${height - 80}" rx="28" fill="url(#gi)" />
+  </g>
+  <rect x="40" y="40" width="${width - 80}" height="150" rx="24" fill="${titleColor}" opacity="0.06" />
+  <text x="60" y="110" font-family="Arial, Helvetica, sans-serif" font-size="42" font-weight="700" fill="${titleColor}">${escapeXml('INVOICE')}</text>
+  ${logoImageTag}
+  <text x="60" y="160" font-family="Arial, Helvetica, sans-serif" font-size="26" fill="#374151">${escapeXml('Business')}:</text>
+  <text x="220" y="160" font-family="Arial, Helvetica, sans-serif" font-size="26" fill="#111827">${safeName}</text>
+  <text x="60" y="200" font-family="Arial, Helvetica, sans-serif" font-size="18" fill="#6b7280">${safeAddress}</text>
+  <g transform="translate(0,40)">
+    <text x="60" y="260" font-family="Arial, Helvetica, sans-serif" font-size="20" fill="#111827">
+      ${textElements}
+    </text>
+  </g>
+  <rect x="60" y="${height - paddingBottom + 10}" width="${width - 120}" height="6" rx="3" fill="#ffffff" opacity="0.15" />
+  <text x="60" y="${height - paddingBottom + 70}" font-family="Arial, Helvetica, sans-serif" font-size="32" font-weight="700" fill="#0f172a">Total Due: ${escapeXml(total || 'N/A')}</text>
+  <text x="60" y="${height - paddingBottom + 120}" font-family="Arial, Helvetica, sans-serif" font-size="16" fill="#9ca3af">Generated by FisiAI</text>
 </svg>`;
 }
 
-async function generateInvoiceAssets({ businessName, businessAddress, invoiceText, total, receiptColor, invoiceNumber }) {
+async function generateInvoiceAssets({ businessName, businessAddress, invoiceText, total, receiptColor, invoiceNumber, logoPath }) {
   const lines = invoiceText
     ? invoiceText.split(/\n|\r\n|\|/).map((line) => line.trim()).filter(Boolean)
     : ['No invoice details provided.'];
@@ -178,6 +298,7 @@ async function generateInvoiceAssets({ businessName, businessAddress, invoiceTex
     total,
     receiptColor,
     invoiceNumber,
+    logoPath,
   });
 
   const svgBuffer = Buffer.from(svg, 'utf8');

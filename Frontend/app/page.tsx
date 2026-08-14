@@ -57,15 +57,17 @@ export default function Home() {
               </p>
             </div>
             <div className="flex flex-col gap-4 sm:flex-row sm:items-center">
-              <Link
-                href="/signup"
+              <a
+                href="https://wa.me/+2347086024885?text=Hi!%20I%20want%20to%20ask%20Fisi%20AI%20about%20inventory%2C%20receipts%2C%20payments%2C%20or%20stock%20updates."
+                target="_blank"
+                rel="noopener noreferrer"
                 className="inline-flex items-center justify-center gap-2 rounded-full bg-emerald-400 px-8 py-4 text-sm font-semibold text-slate-950 transition hover:bg-emerald-300"
               >
                 <svg className="h-5 w-5" fill="currentColor" viewBox="0 0 24 24">
                   <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.67-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.076 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421-7.403h-.004a9.87 9.87 0 00-5.031 1.378c-3.055 2.286-3.428 6.994-1.168 10.654 2.132 3.529 6.038 3.711 8.814 3.711h.46c3.422 0 6.979-.846 9.306-3.24-2.6-.47-5.438-1.9-7.618-4.534-.165-.184-.33-.368-.486-.545-3.291-3.745-3.666-9.035-.872-12.893 2.431-3.415 6.542-4.355 10.322-4.355 3.664 0 7.306.942 10.61 2.821-1.527-1.745-3.649-3.051-6.02-3.554-4.143-.868-8.548.676-11.327 4.128z" />
                 </svg>
                 Get started on WhatsApp
-              </Link>
+              </a>
                <Link
                 href="https://t.me/fisi_online_bot"
                 className="inline-flex items-center justify-center gap-2 rounded-full bg-blue-400 px-8 py-4 text-sm font-semibold text-slate-950 transition hover:bg-emerald-300"

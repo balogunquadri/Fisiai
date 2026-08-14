@@ -5,7 +5,7 @@ const router = express.Router();
 const Merchant = require('../models/Merchant');
 const ActivityLog = require('../models/ActivityLog');
 const WhatsAppService = require('../services/WhatsAppService');
-const { sendVerificationEmail } = require('../services/emailService');
+const { sendVerificationEmail, sendPasswordResetEmail } = require('../services/emailService');
 const { validateSignup, validateSignin } = require('../middleware/inputValidator');
 const { authLimiter } = require('../middleware/rateLimiter');
 const { isAdminEmail } = require('../middleware/adminMiddleware');
@@ -41,7 +41,6 @@ router.post('/signup', authLimiter, validateSignup, async (req, res) => {
             success: false,
             error: 'An account with this email already exists but is not verified. A verification email has been resent.',
             emailVerificationSent: emailSent,
-            verificationLink: !emailSent ? verificationUrl : undefined,
           });
         } catch (err) {
           console.warn('[RESEND_VERIFICATION_ERROR]', err && err.message ? err.message : err);
@@ -106,7 +105,6 @@ router.post('/signup', authLimiter, validateSignup, async (req, res) => {
       merchantId: merchant._id,
       message: 'Account created. Check your email to verify your address.',
       emailVerificationSent: emailSent,
-      verificationLink: !emailSent ? verificationUrl : undefined,
     });
   } catch (error) {
     console.error('[SIGNUP_ERROR]', {
@@ -139,7 +137,6 @@ router.post('/signin', authLimiter, validateSignin, async (req, res) => {
       return res.status(403).json({
         success: false,
         error: 'Email address has not been verified. Check your inbox.',
-        verificationLink: merchant.emailVerificationToken ? `${process.env.FRONTEND_URL || 'http://localhost:3000'}/verify-email?token=${merchant.emailVerificationToken}` : undefined,
       });
     }
 
@@ -237,11 +234,87 @@ router.post('/resend-verification', async (req, res) => {
       success: true,
       message: 'Verification email resent',
       emailVerificationSent: emailSent,
-      verificationLink: !emailSent ? verificationUrl : undefined,
     });
   } catch (error) {
     console.error('Resend verification error:', error);
     return res.status(500).json({ success: false, error: 'Failed to resend verification email' });
+  }
+});
+
+router.post('/forgot-password', authLimiter, async (req, res) => {
+  try {
+    const { email } = req.body || {};
+    const normalizedEmail = typeof email === 'string' ? email.trim().toLowerCase() : '';
+
+    if (!normalizedEmail) {
+      return res.status(400).json({ success: false, error: 'Email is required' });
+    }
+
+    const merchant = await Merchant.findOne({ email: normalizedEmail });
+    if (!merchant) {
+      return res.json({
+        success: true,
+        message: 'If an account exists for that email, a password reset link has been sent.',
+      });
+    }
+
+    const resetToken = crypto.randomBytes(32).toString('hex');
+    merchant.resetPasswordToken = resetToken;
+    merchant.resetPasswordTokenExpires = new Date(Date.now() + 1000 * 60 * 60);
+    await merchant.save();
+
+    const resetUrl = `${process.env.FRONTEND_URL || 'http://localhost:3000'}/reset-password?token=${encodeURIComponent(resetToken)}&email=${encodeURIComponent(normalizedEmail)}`;
+    await sendPasswordResetEmail(merchant.email, resetUrl);
+
+    return res.json({
+      success: true,
+      message: 'If an account exists for that email, a password reset link has been sent.',
+    });
+  } catch (error) {
+    console.error('Forgot password error:', error);
+    return res.status(500).json({ success: false, error: 'Failed to process password reset request' });
+  }
+});
+
+router.post('/reset-password', authLimiter, async (req, res) => {
+  try {
+    const { token, email, password } = req.body || {};
+    const normalizedEmail = typeof email === 'string' ? email.trim().toLowerCase() : '';
+
+    if (!token || !normalizedEmail || !password) {
+      return res.status(400).json({ success: false, error: 'Token, email and a new password are required' });
+    }
+
+    const passwordIsValid = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[^A-Za-z\d]).{7,}$/.test(String(password));
+    if (!passwordIsValid) {
+      return res.status(400).json({
+        success: false,
+        error: 'Password must be at least 7 characters and include uppercase, lowercase, a number, and a special character.',
+      });
+    }
+
+    const merchant = await Merchant.findOne({
+      email: normalizedEmail,
+      resetPasswordToken: token,
+      resetPasswordTokenExpires: { $gt: new Date() },
+    });
+
+    if (!merchant) {
+      return res.status(400).json({ success: false, error: 'Invalid or expired reset link' });
+    }
+
+    merchant.passwordHash = await bcrypt.hash(password, 10);
+    merchant.resetPasswordToken = undefined;
+    merchant.resetPasswordTokenExpires = undefined;
+    await merchant.save();
+
+    return res.json({
+      success: true,
+      message: 'Password reset successfully. You can now sign in with your new password.',
+    });
+  } catch (error) {
+    console.error('Reset password error:', error);
+    return res.status(500).json({ success: false, error: 'Failed to reset password' });
   }
 });
 

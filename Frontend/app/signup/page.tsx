@@ -146,13 +146,13 @@ export default function SignupPage() {
       }
 
       const id = data.merchantId || null;
-      setVerificationLink(data.verificationLink || null);
+      setVerificationLink(null);
       setExistingUnverified(false);
       if (id) window.localStorage.setItem('merchantId', id);
       showToast('Account created successfully. Check your email to verify your address.', 'success');
 
       if (!data.emailVerificationSent && data.verificationLink) {
-        setToastMessage('Account created. We could not send email automatically, so please use the verification link shown below.');
+        setToastMessage('Account created successfully. Check your email to verify your address.');
         return;
       }
 
@@ -343,7 +343,7 @@ export default function SignupPage() {
               {isSubmitting ? 'Creating account...' : 'Create Account'}
             </button>
           </form>
-          {verificationLink ? (
+          {verificationLink && false ? (
             <div className="mt-3 rounded-2xl border border-slate-700 bg-slate-900/80 p-3 text-xs text-slate-300">
               <p className="font-semibold text-slate-200">Verification link</p>
               <p className="break-all">{verificationLink}</p>

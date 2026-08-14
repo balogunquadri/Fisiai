@@ -122,9 +122,9 @@ export default function SigninPage() {
                 />
                 <span className="text-xs text-slate-400">Remember me</span>
               </label>
-              <a href="#" className="text-xs text-emerald-400 hover:underline">
+              <Link href="/forgot-password" className="text-xs text-emerald-400 hover:underline">
                 Forgot password?
-              </a>
+              </Link>
             </div>
 
             {/* Submit Button */}
@@ -148,7 +148,7 @@ export default function SigninPage() {
 
           {/* WhatsApp Button */}
           <a
-            href="https://wa.me/1234567890?text=I%20want%20to%20sign%20in%20to%20Fisi%20Ai"
+            href="https://wa.me/+2347086024885?text=I%20want%20to%20sign%20in%20to%20Fisi%20Ai"
             target="_blank"
             rel="noopener noreferrer"
             className="flex items-center justify-center gap-2 w-full rounded-lg border border-white/10 bg-slate-800/50 px-4 py-3 text-sm font-semibold text-slate-100 hover:bg-slate-800 transition"
