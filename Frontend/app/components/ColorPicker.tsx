@@ -55,37 +55,118 @@ export default function ColorPicker({} : {}) {
     const file = e.target.files && e.target.files[0];
     if (!file) return;
     if (typeof window === 'undefined') return;
-    const reader = new FileReader();
-    reader.onload = async () => {
-      const dataUrl = String(reader.result || '');
+    // Client-side resize/pad to 300x150 and compress before uploading
+    try {
+      setUploading(true);
+      const img = await new Promise<HTMLImageElement>((resolve, reject) => {
+        const url = URL.createObjectURL(file);
+        const image = new Image();
+        image.onload = () => {
+          URL.revokeObjectURL(url);
+          resolve(image);
+        };
+        image.onerror = (e) => {
+          URL.revokeObjectURL(url);
+          reject(new Error('Failed to load image'));
+        };
+        image.src = url;
+      });
+
+      const CANVAS_W = 300;
+      const CANVAS_H = 150;
+      const canvas = document.createElement('canvas');
+      canvas.width = CANVAS_W;
+      canvas.height = CANVAS_H;
+      const ctx = canvas.getContext('2d');
+      if (!ctx) throw new Error('Canvas not supported');
+
+      // Fill transparent background
+      ctx.clearRect(0, 0, CANVAS_W, CANVAS_H);
+
+      // Compute aspect-fit size
+      const srcW = img.naturalWidth || img.width;
+      const srcH = img.naturalHeight || img.height;
+      const srcRatio = srcW / srcH;
+      const destRatio = CANVAS_W / CANVAS_H;
+      let drawW = CANVAS_W;
+      let drawH = CANVAS_H;
+      if (srcRatio > destRatio) {
+        drawW = CANVAS_W;
+        drawH = Math.round(CANVAS_W / srcRatio);
+      } else {
+        drawH = CANVAS_H;
+        drawW = Math.round(CANVAS_H * srcRatio);
+      }
+
+      const offsetX = Math.round((CANVAS_W - drawW) / 2);
+      const offsetY = Math.round((CANVAS_H - drawH) / 2);
+
+      // Draw with high quality
+      ctx.imageSmoothingEnabled = true;
+      ctx.imageSmoothingQuality = 'high';
+      ctx.drawImage(img, offsetX, offsetY, drawW, drawH);
+
+      // Try PNG first to preserve transparency
+      let blob: Blob | null = await new Promise((resolve) => canvas.toBlob(resolve as BlobCallback, 'image/png'));
+
+      const MAX_BYTES = 200 * 1024;
+      if (!blob) throw new Error('Failed to convert canvas to blob');
+
+      // If PNG too large, try JPEG with descending quality
+      if (blob.size > MAX_BYTES) {
+        let quality = 0.92;
+        let out: Blob | null = null;
+        while (quality >= 0.35) {
+          // eslint-disable-next-line no-await-in-loop
+          out = await new Promise((resolve) => canvas.toBlob(resolve as BlobCallback, 'image/jpeg', quality));
+          if (out && out.size <= MAX_BYTES) {
+            blob = out;
+            break;
+          }
+          quality -= 0.15;
+        }
+        // If still too large, use last out if present
+        if (out && out.size < blob.size) blob = out;
+      }
+
+      // Convert blob to data URL
+      const dataUrl = await new Promise<string>((resolve, reject) => {
+        const r = new FileReader();
+        r.onload = () => resolve(String(r.result || ''));
+        r.onerror = (e) => reject(e);
+        r.readAsDataURL(blob as Blob);
+      });
+
+      // Preview resized image immediately
+      setLogoUrl(dataUrl);
+
+      // Upload to backend
       const merchantId = window.localStorage.getItem('merchantId');
       if (!merchantId) {
         alert('Please sign in or set a merchant first to upload a logo.');
+        setUploading(false);
         return;
       }
-      try {
-        setUploading(true);
-        const resp = await fetch(`/api/dashboard/${merchantId}/logo`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ logoData: dataUrl }),
-        });
-        const json = await resp.json();
-        if (resp.ok && json.logoUrl) {
-          window.localStorage.setItem('merchantLogoUrl', json.logoUrl);
-          setLogoUrl(json.logoUrl);
-        } else {
-          console.warn('Logo upload failed', json);
-          alert('Logo upload failed');
-        }
-      } catch (err) {
-        console.warn('Upload error', err);
+
+      const resp = await fetch(`/api/dashboard/${merchantId}/logo`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ logoData: dataUrl }),
+      });
+      const json = await resp.json();
+      if (resp.ok && json.logoUrl) {
+        window.localStorage.setItem('merchantLogoUrl', json.logoUrl);
+        setLogoUrl(json.logoUrl);
+      } else {
+        console.warn('Logo upload failed', json);
         alert('Logo upload failed');
-      } finally {
-        setUploading(false);
       }
-    };
-    reader.readAsDataURL(file);
+    } catch (err) {
+      console.warn('Upload error', err);
+      alert('Logo upload failed');
+    } finally {
+      setUploading(false);
+    }
   }
 
   async function handleRemoveLogo() {
